@@ -965,6 +965,22 @@ class Plugin(object):
 
         return self._active
 
+    def _get_project_filters(self):
+        """
+            {
+                "filter_operator": "any",
+                "filters": [
+                    ["assets", "is", {"type": "Asset", "id": 9}],
+                    ["assets", "is", {"type": "Asset", "id": 23}]
+                ]
+            }
+        """
+        project_filters = []
+        for project_id in self._project_id:
+            project_filters.append(["project", "is", {"type": "Project", "id": int(project_id)}])
+
+        return project_filters
+        
     def _updateLastEventId(self, event):
         BACKLOG_TIMEOUT = (
             5  # time in minutes after which we consider a pending event won't happen
