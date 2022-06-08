@@ -264,8 +264,7 @@ class Engine(object):
     """
 
     def __init__(self, configPath):
-        """
-        """
+        """ """
         self._continue = True
         self._eventIdData = {}
 
@@ -367,7 +366,7 @@ class Engine(object):
         socket.setdefaulttimeout(60)
 
         # Notify which version of shotgun api we are using
-        self.log.info("Using Shotgun Python API version %s" % sg.__version__)
+        self.log.info("Using SG Python API version %s" % sg.__version__)
 
         try:
             for collection in self._pluginCollections:
@@ -469,7 +468,6 @@ class Engine(object):
             self._saveEventIdData()
 
     def _getLastEventIdFromDatabase(self):
-
         conn_attempts = 0
         lastEventId = None
         while lastEventId is None:
@@ -485,9 +483,7 @@ class Engine(object):
                 conn_attempts = self._checkConnectionAttempts(conn_attempts, msg)
             else:
                 lastEventId = result["id"]
-                self.log.info(
-                    "Last event id (%d) from the Shotgun database.", lastEventId
-                )
+                self.log.info("Last event id (%d) from the SG database.", lastEventId)
 
         return lastEventId
 
@@ -539,6 +535,22 @@ class Engine(object):
     def stop(self):
         self._continue = False
 
+    def _get_project_filters(self):
+        """
+            {
+                "filter_operator": "any",
+                "filters": [
+                    ["assets", "is", {"type": "Asset", "id": 9}],
+                    ["assets", "is", {"type": "Asset", "id": 23}]
+                ]
+            }
+        """
+        project_filters = []
+        for project_id in self._project_id:
+            project_filters.append(["project", "is", {"type": "Project", "id": int(project_id)}])
+
+        return project_filters
+
     def _getNewEvents(self):
         """
         Fetch new events from Shotgun.
@@ -555,20 +567,16 @@ class Engine(object):
 
         if nextEventId is not None:
             if self._project_id is not None:
-                project_filters = []
-                for project_id in self._project_id:
-                    project_filters.append(["project", "is", {"type": "Project", "id": int(project_id)}])
-
+                project_filters = self._get_project_filters()
                 filters = [
-                            ["id", "greater_than", nextEventId - 1],
-                            {    
-                                "filter_operator": "any",
-                                "filters": project_filters
-                            }
-                        ]
+                    ["id", "greater_than", nextEventId - 1],
+                    {    
+                        "filter_operator": "any",
+                        "filters": project_filters
+                    }
+                ]
             else: 
                 filters = [["id", "greater_than", nextEventId - 1]]
-
             fields = [
                 "id",
                 "event_type",
@@ -581,7 +589,6 @@ class Engine(object):
                 "created_at",
             ]
             order = [{"column": "id", "direction": "asc"}]
-
             conn_attempts = 0
             while True:
                 try:
@@ -643,7 +650,7 @@ class Engine(object):
         conn_attempts += 1
         if conn_attempts == self._max_conn_retries:
             self.log.error(
-                "Unable to connect to Shotgun (attempt %s of %s): %s",
+                "Unable to connect to SG (attempt %s of %s): %s",
                 conn_attempts,
                 self._max_conn_retries,
                 msg,
@@ -652,7 +659,7 @@ class Engine(object):
             time.sleep(self._conn_retry_sleep)
         else:
             self.log.warning(
-                "Unable to connect to Shotgun (attempt %s of %s): %s",
+                "Unable to connect to SG (attempt %s of %s): %s",
                 conn_attempts,
                 self._max_conn_retries,
                 msg,
@@ -767,6 +774,7 @@ class Plugin(object):
         self._callbacks = []
         self._mtime = None
         self._lastEventId = None
+        self._project_id = None
         self._backlog = {}
 
         # Setup the plugin's logger
@@ -798,7 +806,7 @@ class Plugin(object):
             nextId = self._lastEventId + 1
         else:
             nextId = None
-
+            
         now = datetime.datetime.now()
         for k in list(self._backlog):
             v = self._backlog[k]
@@ -807,7 +815,13 @@ class Plugin(object):
                 del self._backlog[k]
             elif nextId is None or k < nextId:
                 nextId = k
-
+            else:            
+                v = self._backlog[k]
+                if v < now:
+                    self.logger.warning("Timeout elapsed on backlog event id %d.", k)
+                    del self._backlog[k]
+                elif nextId is None or k < nextId:
+                    nextId = k
         return nextId
 
     def isActive(self):
@@ -980,8 +994,35 @@ class Plugin(object):
                     minutes=BACKLOG_TIMEOUT
                 )
                 for skippedId in range(self._lastEventId + 1, event["id"]):
-                    self.logger.info("Adding event id %d to backlog.", skippedId)
-                    self._backlog[skippedId] = expiration
+                    if self._project_id is not None:
+                        project_filters = self._get_project_filters()
+                        filters = [
+                            ["id", "is", skippedId],
+                            {    
+                                "filter_operator": "any",
+                                "filters": project_filters
+                            }
+                        ]
+                        fields = ["id"]
+                        order = [{"column": "id", "direction": "asc"}]
+                        try:
+                            event = self._sg.find_one(
+                                    "EventLogEntry",
+                                    filters,
+                                    fields,
+                                    order
+                                )
+                        except (sg.ProtocolError, sg.ResponseError, socket.error) as err:
+                                conn_attempts = self._checkConnectionAttempts(
+                                    conn_attempts, str(err)
+                                )
+                        except Exception as err:
+                                msg = "Unknown error: %s" % str(err)
+                                conn_attempts = self._checkConnectionAttempts(conn_attempts, msg)
+
+                        if event:
+                            self.logger.info("Adding event id %d to backlog.", skippedId)
+                            self._backlog[skippedId] = expiration
         self._lastEventId = event["id"]
 
     def __iter__(self):
@@ -1207,8 +1248,8 @@ class CustomSMTPHandler(logging.handlers.SMTPHandler):
     """
 
     LEVEL_SUBJECTS = {
-        logging.ERROR: "ERROR - Shotgun event daemon.",
-        logging.CRITICAL: "CRITICAL - Shotgun event daemon.",
+        logging.ERROR: "ERROR - SG event daemon.",
+        logging.CRITICAL: "CRITICAL - SG event daemon.",
     }
 
     def __init__(
@@ -1358,8 +1399,7 @@ class LinuxDaemon(daemonizer.Daemon):
 
 
 def main():
-    """
-    """
+    """ """
     if CURRENT_PYTHON_VERSION <= PYTHON_26:
         print(
             "Python 2.5 and older is not supported anymore. Please use Python 2.6 or newer."
