@@ -1299,9 +1299,7 @@ class LinuxDaemon(daemonizer.Daemon):
 
     def __init__(self):
         self._engine = Engine(_getConfigPath())
-        super().__init__(
-            "shotgunEvent", self._engine.config.getEnginePIDFile()
-        )
+        super().__init__("shotgunEvent", self._engine.config.getEnginePIDFile())
 
     def start(self, daemonize=True):
         if not daemonize:
