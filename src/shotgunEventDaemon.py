@@ -599,7 +599,9 @@ class Engine(object):
                 if state:
                     try:
                         with open(eventIdFile, "wb") as fh:
-                            pickle.dump(self._eventIdData, fh, protocol=pickle.HIGHEST_PROTOCOL)
+                            pickle.dump(
+                                self._eventIdData, fh, protocol=pickle.HIGHEST_PROTOCOL
+                            )
                     except OSError as err:
                         self.log.error(
                             "Can not write event id data to %s.\n\n%s",
