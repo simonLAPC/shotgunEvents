@@ -28,13 +28,6 @@ from __future__ import print_function
 __version__ = "1.0"
 __version_info__ = (1, 0)
 
-# Suppress the deprecation warning about imp until we get around to replacing it
-import warnings
-
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=DeprecationWarning)
-    import imp
-
 import datetime
 import logging
 import logging.handlers
@@ -58,6 +51,8 @@ if sys.platform == "win32":
 import daemonizer
 import shotgun_api3 as sg
 from shotgun_api3.lib.sgtimezone import SgTimezone
+
+import importlib_wrapper
 
 
 SG_TIMEZONE = SgTimezone()
@@ -835,7 +830,7 @@ class Plugin(object):
         self._active = True
 
         try:
-            plugin = imp.load_source(self._pluginName, self._path)
+            plugin = importlib_wrapper.load_source(self._pluginName, self._path)
         except:
             self._active = False
             self.logger.error(
