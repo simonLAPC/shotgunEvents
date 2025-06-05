@@ -9,6 +9,7 @@ import importlib.util
 import importlib.machinery
 from types import ModuleType
 
+
 def load_source(modname: str, filename: str) -> ModuleType:
     loader = importlib.machinery.SourceFileLoader(modname, filename)
     spec = importlib.util.spec_from_file_location(modname, filename, loader=loader)
