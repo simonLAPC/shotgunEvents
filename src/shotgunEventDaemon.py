@@ -33,7 +33,7 @@ import warnings
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
-    import imp
+    import importlib
 
 import datetime
 import logging
@@ -46,6 +46,7 @@ import time
 import traceback
 import configparser
 import pickle
+
 
 from distutils.version import StrictVersion
 
@@ -835,7 +836,17 @@ class Plugin(object):
         self._active = True
 
         try:
-            plugin = imp.load_source(self._pluginName, self._path)
+            from importlib.util import spec_from_file_location, module_from_spec
+
+            # imp is outdated so wont compile :(
+            # plugin = imp.load_source(self._pluginName, self._path)
+
+            # new attempt:
+            spec = spec_from_file_location(self._pluginName, self._path)
+            module = module_from_spec(spec)
+            spec.loader.exec_module(module)
+            plugin = module
+
         except:
             self._active = False
             self.logger.error(
