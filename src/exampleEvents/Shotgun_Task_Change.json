@@ -1,0 +1,42 @@
+{
+  "type": "EventLogEntry",
+  "id": 10374724,
+  "event_type": "Shotgun_Task_Change",
+  "attribute_name": "sg_status_list",
+  "meta": {
+    "oid": "CTJ4KRS8E3MU",
+    "type": "attribute_change",
+    "attribute_name": "sg_status_list",
+    "entity_type": "Task",
+    "entity_id": 139289,
+    "field_data_type": "status_list",
+    "old_value": "wtg",
+    "new_value": "ip"
+  },
+  "entity": {
+    "id": 139289,
+    "name": "Asset 1 Task",
+    "type": "Task"
+  },
+  "user": {
+    "id": 2794,
+    "name": "Simon Nordon",
+    "type": "HumanUser"
+  },
+  "project": {
+    "id": 320,
+    "name": "IT Dev World Project",
+    "type": "Project"
+  },
+  "session_uuid": "b580b3de-5711-11f0-be38-0a58a9feac02",
+  "created_at": datetime.datetime(2025,
+  7,
+  2,
+  16,
+  56,
+  58,
+  tzinfo=<shotgun_api3.lib.sgtimezone.LocalTimezone
+  object
+  at
+  0x00000233FD0185B0>)
+}
